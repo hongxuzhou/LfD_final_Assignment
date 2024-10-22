@@ -47,8 +47,8 @@ def create_arg_parser():
                         help="Train file to learn from (default train.txt)")
     parser.add_argument("-d", "--dev_file", default='datasets/dev.txt', type=str,
                         help="Dev file to evaluate on (default dev.txt)")
-    parser.add_argument("-s", "--sentiment", action="store_true",
-                        help="Do sentiment analysis (2-class problem)")
+    parser.add_argument("-of", "--offtag", action="store_true",
+                        help="Perform offensive language detection (2-class problem)")
     parser.add_argument("-tf", "--tfidf", action="store_true",
                         help="Use the TF-IDF vectorizer instead of CountVectorizer")
     parser.add_argument("-a", "--algorithm", default='naive_bayes', type=str,
@@ -85,12 +85,12 @@ def create_arg_parser():
     args = parser.parse_args()
     return args
 
-def read_corpus(corpus_file, use_sentiment, use_char_ngrams=False): # Not use_sentiment, but should be offensive tag
+def read_corpus(corpus_file, off_tag, use_char_ngrams=False): # Not use_sentiment, but should be offensive tag
     '''
     This function reads the corpus file and converts the textual data into a format more suitable for classification tasks later on
 
     @param corpus_file: input file consisting of textual data
-    @param use_sentiment: boolean indicating whether sentiment will need to be used
+    @param off_tag: boolean indicating whether sentiment will need to be used
     @return: the documents (list of tokens) and
             labels (target labels for each document, this can be either sentiment labels or category labels)
     '''
@@ -98,15 +98,17 @@ def read_corpus(corpus_file, use_sentiment, use_char_ngrams=False): # Not use_se
     labels = []
     with open(corpus_file, encoding='utf-8') as in_file:
         for line in in_file:
-            tokens = line.strip().split()
-            tokens = line.strip().split()
-            documents.append(tokens[0]) # Text is the first element in the line
-            labels.append(tokens[1:]) # Labels are the second of the elements in the line
+            tokens = line.strip().split() # Split the line into tokens by tab for TSV format
+            if len(tokens) == 2: # Ensure both text and tag are present
+                text, label = tokens
+                documents.append(text)
+                labels.append(label)
     return documents, labels
 
 
 def identity(inp):
     '''Dummy function that just returns the input'''
+    print(f"Identity function input: {inp[:100]}") # Print the first 100 characters of the input
     return inp
 
 def stemming(inp):
@@ -245,9 +247,8 @@ if __name__ == "__main__":
     args = create_arg_parser()
 
     # Load the train and test datasets
-    X_train, Y_train = read_corpus(args.train_file) # Adjustment: to make the sets take charcter ngram parameters
-    X_test, Y_test = read_corpus(args.dev_file)
-
+    X_train, Y_train = read_corpus(args.train_file, args.offtag) # Adjustment: to make the sets take charcter ngram parameters
+    X_test, Y_test = read_corpus(args.dev_file, args.offtag)
     # Convert the texts to vectors
     # We use a dummy function as tokenizer and preprocessor,
     # since the texts are already preprocessed and tokenized.
@@ -263,10 +264,10 @@ if __name__ == "__main__":
     nlp = spacy.load("en_core_web_sm")
 
     if args.tfidf:
-        vec = TfidfVectorizer(preprocessor=identity, tokenizer=chosen_tokenizer, analyzer=ngram_level, ngram_range=ngram_range)
+        vec = TfidfVectorizer(preprocessor=identity, tokenizer=chosen_tokenizer, analyzer=ngram_level, ngram_range=ngram_range, min_df=1, max_df=1.0)
     else:
         # Bag of Words vectorizer
-        vec = CountVectorizer(preprocessor=identity, tokenizer=chosen_tokenizer, analyzer=ngram_level, ngram_range=ngram_range)
+        vec = CountVectorizer(preprocessor=identity, tokenizer=chosen_tokenizer, analyzer=ngram_level, ngram_range=ngram_range, min_df=1, max_df=1.0)
 
     # Get the classifier that was given in the input arguments
     chosen_classifier = get_classifier(args.algorithm)

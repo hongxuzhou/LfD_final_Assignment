@@ -134,16 +134,33 @@ def train_model(model, X_train, Y_train, X_dev, Y_dev):
     # Potentially change these to cmd line args again
     # And yes, don't be afraid to experiment!
     verbose = 1
-    batch_size = 16
-    epochs = 50
-    # Early stopping: stop training when there are three consecutive epochs without improving
-    # It's also possible to monitor the training loss with monitor="loss"
-    callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3)
+    batch_size = 32 # 16 -> 32
+    epochs = 10 # 50 -> 10, start low
+    
+    # Create callback to stop training early if no improvement
+    checkpoint_cb = tf.keras.callbacks.ModelCheckpoint("best_model.h5", 
+                                                       save_best_only=True,
+                                                       monitor='val_accuracy',) # Use val_accuracy to monitor
+    
+    # Early stopping callback
+    early_stopping_cb = tf.keras.callbacks.EarlyStopping(patience=5,
+                                                         monitor='val_accuracy',
+                                                         restore_best_weights = True)
+    
+    
     # Finally fit the model to our data
-    model.fit(X_train, Y_train, verbose=verbose, epochs=epochs, callbacks=[callback], batch_size=batch_size, validation_data=(X_dev, Y_dev))
+    history = model.fit(
+        X_train, Y_train, 
+        verbose=verbose, 
+        pochs=epochs, 
+        callbacks=[checkpoint_cb, early_stopping_cb], 
+        batch_size=batch_size, 
+        validation_data=(X_dev, Y_dev))
+    
     # Print final accuracy for the model (clearer overview)
-    test_set_predict(model, X_dev, Y_dev, "dev")
-    return model
+    test_set_predict(model, X_dev, Y_dev, "dev") # This is not shown in Claude code, may need to be deleted if runs into error
+    
+    return model, history
 
 
 def test_set_predict(model, X_test, Y_test, ident):

@@ -152,7 +152,7 @@ def train_model(model, X_train, Y_train, X_dev, Y_dev):
     history = model.fit(
         X_train, Y_train, 
         verbose=verbose, 
-        pochs=epochs, 
+        epochs=epochs, 
         callbacks=[checkpoint_cb, early_stopping_cb], 
         batch_size=batch_size, 
         validation_data=(X_dev, Y_dev))
@@ -194,40 +194,57 @@ def main():
     # Read in the data and embeddings
     X_train, Y_train = read_corpus(args.train_file)
     X_dev, Y_dev = read_corpus(args.dev_file)
+    
+    print('Reading embeddings...')
     embeddings = read_embeddings(args.embeddings)
 
     # Transform words to indices using a vectorizer
-    vectorizer = TextVectorization(standardize=None, output_sequence_length=50)
+    print("Vectorizing data...")
+    vectorizer = TextVectorization(standardize='lower_and_strip_punctuation', 
+                                   output_sequence_length=50) # Needs to adjust based on test results
+    
     # Use train and dev to create vocab - could also do just train
     text_ds = tf.data.Dataset.from_tensor_slices(X_train + X_dev)
     vectorizer.adapt(text_ds)
+    
     # Dictionary mapping words to idx
     voc = vectorizer.get_vocabulary()
+    
+    # Get embedding matrix
     emb_matrix = get_emb_matrix(voc, embeddings)
 
-    # Transform string labels to one-hot encodings
-    encoder = LabelBinarizer()
-    Y_train_bin = encoder.fit_transform(Y_train)  # Use encoder.classes_ to find mapping back
-    Y_dev_bin = encoder.fit_transform(Y_dev)
-
-    # Create model
-    model = create_model(Y_train, emb_matrix)
-
-    # Transform input to vectorized input
+    # Transform string labels to one-hot encodings (binary)
+    label_dict = {'NOT': 0, 'OFF': 1}
+    Y_train =  np.array([label_dict[y] for y in Y_train])  # NOT Use encoder.classes_ to find mapping back
+    Y_dev = np.array([label_dict[y] for y in Y_dev])
+    
+    # Vectorize text data
     X_train_vect = vectorizer(np.array([[s] for s in X_train])).numpy()
     X_dev_vect = vectorizer(np.array([[s] for s in X_dev])).numpy()
 
-    # Train the model
-    model = train_model(model, X_train_vect, Y_train_bin, X_dev_vect, Y_dev_bin)
+    # Create model
+    #model = create_model(Y_train, emb_matrix) <- Claude removed it 
 
-    # Do predictions on specified test set
+    # Transform input to vectorized input
+    # Create and train model
+    print('Creating model...')
+    model = create_model(Y_train, emb_matrix)
+    print('Training model...')
+    model, history = train_model(model, X_train_vect, Y_train, X_dev_vect, Y_dev)
+
+    # Train the model
+    #model = train_model(model, X_train_vect, Y_train_bin, X_dev_vect, Y_dev_bin) <- clause removed it
+
+    # Do predictions on specified test set -- test if specified
     if args.test_file:
         # Read in test set and vectorize
+        print('Predicting on test set...')
         X_test, Y_test = read_corpus(args.test_file)
-        Y_test_bin = encoder.fit_transform(Y_test)
+        Y_test = np.array([label_dict[y] for y in Y_test])
         X_test_vect = vectorizer(np.array([[s] for s in X_test])).numpy()
+        
         # Finally do the predictions
-        test_set_predict(model, X_test_vect, Y_test_bin, "test")
+        test_set_predict(model, X_test_vect, Y_test, "test")
 
 if __name__ == '__main__':
     main()

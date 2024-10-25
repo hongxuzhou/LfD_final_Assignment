@@ -9,7 +9,7 @@ import numpy as np
 from keras.models import Sequential
 from keras.layers import Dense, Embedding, LSTM
 from keras.initializers import Constant
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score, classification_report
 from sklearn.preprocessing import LabelBinarizer
 from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.layers import TextVectorization
@@ -167,11 +167,24 @@ def test_set_predict(model, X_test, Y_test, ident):
     '''Do predictions and measure accuracy on our own test set (that we split off train)'''
     # Get predictions using the trained model
     Y_pred = model.predict(X_test)
+    
     # Finally, convert to numerical labels to get scores with sklearn
-    Y_pred = np.argmax(Y_pred, axis=1)
-    # If you have gold data, you can calculate accuracy
-    Y_test = np.argmax(Y_test, axis=1)
-    print('Accuracy on own {1} set: {0}'.format(round(accuracy_score(Y_test, Y_pred), 3), ident))
+    Y_pred_binary = (Y_pred > 0.5).astype(int)
+    
+    # Calculate accuracy
+    accuracy = accuracy_score(Y_test, Y_pred_binary)
+    
+    # Calculate F1 score
+    f1 = f1_score(Y_test, Y_pred_binary, average='binary')
+    
+    # Print out the results
+    print(f'Results on {ident} set:')
+    print(f"Accuracy on {ident} set: {accuracy:.4f}")
+    print(f"Macro F1 score on {ident} set: {f1:.4f}")
+    print('\nClassification Report:')
+    print(classification_report(Y_test, Y_pred_binary)) 
+    
+    return accuracy, f1
 
 
 def main():

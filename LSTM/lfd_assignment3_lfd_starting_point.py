@@ -28,8 +28,8 @@ def create_arg_parser():
                         help="Separate dev set to read in (default dev.txt)")
     parser.add_argument("-t", "--test_file", type=str,
                         help="If added, use trained model to predict on test set")
-    parser.add_argument("-e", "--embeddings", default='glove_reviews.json', type=str,
-                        help="Embedding file we are using (default glove_reviews.json)")
+    parser.add_argument("-e", "--embeddings", default='/Users/hongxuzhou/Desktop/lfd_final_glove/converted_json/glove_twitter_100d.json', type=str,
+                        help="Embedding file we are using default twitter glove 100d")
     args = parser.parse_args()
     return args
 

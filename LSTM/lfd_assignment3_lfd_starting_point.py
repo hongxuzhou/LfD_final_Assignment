@@ -88,22 +88,44 @@ def get_emb_matrix(voc, emb):
 def create_model(Y_train, emb_matrix):
     '''Create the Keras model to use'''
     # Define settings, you might want to create cmd line args for them
-    learning_rate = 0.01
-    loss_function = 'categorical_crossentropy'
-    optim = SGD(learning_rate=learning_rate)
+    learning_rate = 0.001
+    loss_function = 'binary_crossentropy' # Changed from 'categorical_crossentropy' because of 2-class problem
+    optim = tf.keras.optimizers.Adam(learning_rate=learning_rate) # Changed from SGD to Adam
+    
     # Take embedding dim and size from emb_matrix
     embedding_dim = len(emb_matrix[0])
     num_tokens = len(emb_matrix)
-    num_labels = len(set(Y_train))
+    
+    #num_labels = len(set(Y_train)) <- this is removed by claude 
+    
     # Now build the model
     model = Sequential()
+    
+    # Embedding layer -- keeping embeddings frozen (trainable=False)
     model.add(Embedding(num_tokens, embedding_dim, embeddings_initializer=Constant(emb_matrix),trainable=False))
-    # Here you should add LSTM layers (and potentially dropout)
-    raise NotImplementedError("Add LSTM layer(s) here")
-    # Ultimately, end with dense layer with softmax
-    model.add(Dense(input_dim=embedding_dim, units=num_labels, activation="softmax"))
+    
+    # Add LSTM layers with dropout
+    model.add(LSTM(units = 100,
+                   return_sequences = True, # Return full sequence for next layer
+                   dropout = 0.2, # Dropout on inputs 
+                   recurrent_dropout = 0.2,)) # Dropout on recurrent connections
+    
+    # Add another LSTM layer
+    model.add(LSTM(units = 50,
+                   dropout = 0.2,
+                   recurrent_dropout = 0.2,))
+    
+    # Dense layer -- Ultimately, end with dense layer with softmax
+    model.add(Dense(units=50, activation="softmax")) # Changed from num_labels to 50
+    model.add(tf.keras.layers.Dropout(0.2)) # Added dropout layer
+    
+    # Output layer
+    model.add(Dense(units=1, activation="sigmoid"))  
+    
     # Compile model using our settings, check for accuracy
-    model.compile(loss=loss_function, optimizer=optim, metrics=['accuracy'])
+    model.compile(loss=loss_function, 
+                  optimizer=optim, 
+                  metrics=['accuracy'])
     return model
 
 

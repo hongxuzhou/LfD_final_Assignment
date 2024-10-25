@@ -40,10 +40,25 @@ def read_corpus(corpus_file):
     labels = []
     with open(corpus_file, encoding='utf-8') as f:
         for line in f:
-            tokens = line.strip()
-            documents.append(" ".join(tokens.split()[3:]).strip())
-            # 6-class problem: books, camera, dvd, health, music, software
-            labels.append(tokens.split()[0])
+            # Split on whitespace and take the text after the label
+            tokens = line.strip().split()
+            
+            # exact the label which is the last token in the line
+            label = tokens[-1]
+            
+            # Extract the text which is the rest of the tokens
+            text = " ".join(tokens[:-1])
+            
+            # Skip potential empty lines
+            if not text or not label:
+                continue
+            
+            # Append to lists
+            documents.append(text)
+            
+            # 2-class problem: offensive vs non-offensive
+            labels.append(label)
+            
     return documents, labels
 
 

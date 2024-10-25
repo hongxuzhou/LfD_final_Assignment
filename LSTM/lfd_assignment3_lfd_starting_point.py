@@ -138,7 +138,7 @@ def train_model(model, X_train, Y_train, X_dev, Y_dev):
     epochs = 10 # 50 -> 10, start low
     
     # Create callback to stop training early if no improvement
-    checkpoint_cb = tf.keras.callbacks.ModelCheckpoint("best_model.h5", 
+    checkpoint_cb = tf.keras.callbacks.ModelCheckpoint("best_model.keras", 
                                                        save_best_only=True,
                                                        monitor='val_accuracy',) # Use val_accuracy to monitor
     
